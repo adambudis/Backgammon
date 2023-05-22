@@ -4,9 +4,7 @@ import random
 def main():
     herni_deska = Herni_Deska()
     herni_deska.vytvor_kameny()
-    print(herni_deska._herni_pole[1])
-    #herni_deska._herni_pole[0].vloz_kamen(Kamen("cerna", 1))
-    #print(herni_deska._herni_pole[0])
+    print(herni_deska)
 
 
 class Hra:
@@ -32,15 +30,15 @@ class Herni_Deska:
         new_bily_kameny = [0, 0, 0, 0, 0, 5, 0, 3, 0, 0, 0, 0, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2]
 
         for i in range(len(new_cerny_kameny)):
-            for j in range(new_cerny_kameny[i]):
+            for _ in range(new_cerny_kameny[i]):
                     self._herni_pole[i].vloz_kamen(Kamen("Cerna", i))    
 
         for i in range(len(new_bily_kameny)):
-            for j in range(new_bily_kameny[i]):
+            for _ in range(new_bily_kameny[i]):
                     self._herni_pole[i].vloz_kamen(Kamen("Bila", i))   
 
     def __str__(self) -> str:
-        return f"" 
+        return "\n".join(str(pole) for pole in self._herni_pole)
 
 
 class Kamen:
@@ -64,18 +62,19 @@ class Kamen:
         self._historie.append(nova_pozice)
 
     def __str__(self) -> str:
-        return f"Tento {self.barva_kamene} kamen je na pozici {self._historie[-1]}"
+        return f"{self._barva_kamene}"
 
 
 # modifikovany zasobnik
 class Herni_Pole:
-    def __init__(self, i: int, max_size=15) -> None:
+    def __init__(self, i: int, max_size=5) -> None:
         self._cislo_pole = i
         self._kameny = []
-        # self._max_size = max_size
+        self._max_size = max_size
 
     def vloz_kamen(self, kamen: Kamen) -> None:
-        self._kameny.append(kamen)
+        if self.get_velikost() <= 5:
+            self._kameny.append(kamen)
 
     def vytahni_kamen(self) -> Kamen:
         return self._kameny.pop()
@@ -84,18 +83,22 @@ class Herni_Pole:
         return self._kameny[-1]
 
     def je_prazdny(self) -> bool:
-        return len(self._items) == 0
+        return len(self._kameny) == 0
 
-    def vrat_velikost(self) -> int:
-        return len(self._items)
+    def get_velikost(self) -> int:
+        return len(self._kameny)
 
     @property
     def cislo_pole(self) -> int:
         return self._cislo_pole
+    
+    @property
+    def kameny(self) -> list:
+        return self._kameny
 
     def __str__(self) -> str:
-        return f"Herni pole cislo {self._cislo_pole} ma {len(self._kameny)} kamenu"
-
+        #return ", ".join(str(kamen) for kamen in self._kameny)
+        return f"{self._cislo_pole}: {[str(kamen) for kamen in self._kameny]}"
 
 class Bar:
     pass
