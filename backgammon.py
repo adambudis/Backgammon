@@ -36,20 +36,31 @@ class Hra:
 
     def zacatek_novyho_tahu(self) -> None:    
         barva_hrace = self._hraci[self._current_player].barva_hrace
-        vysledek_kostky = self._dvojkostka.hod_dvojkostkou()
-        list_posunu = self.modify_list_posunu(barva_hrace, vysledek_kostky)
-        legal_moves = self._herni_deska.get_legal_moves(list_posunu, barva_hrace)
+        # vysledek_kostky = self._dvojkostka.hod_dvojkostkou()
+        vysledek_kostky = [1, 2]
+        list_posunu = self.modify_list_posunu(barva_hrace, list(vysledek_kostky))
+        legal_moves = self.get_legal_moves(list_posunu, barva_hrace)
         self.vypis_hru(barva_hrace, vysledek_kostky, list_posunu, legal_moves)
 
-        if len(legal_moves) != 0:
-            while len(list_posunu) != 0: 
-                # hracuv tah je legalni
-                hracuv_tah = self._hraci[self._current_player].hrat_tah(list_posunu, legal_moves)
-                self._herni_deska.move_kamen(hracuv_tah[0], hracuv_tah[1])
+        while len(legal_moves) != 0 and len(list_posunu) != 0:
+            # hracuv tah je legalni
+            hracuv_tah = self._hraci[self._current_player].hrat_tah(legal_moves)
+            
+            # odečetení od listu_posunu
+            vzdalenost = hracuv_tah[1] - hracuv_tah[0]
+            if vzdalenost in list_posunu:
+                # JINEJ MOVE PRI MOVE Z BARU
+                if hracuv_tah[0] == 24 or hracuv_tah[0] == -1:
+                    self._herni_deska.move_kamen_from_bar(barva_hrace, hracuv_tah[1])
+                else:
+                    self._herni_deska.move_kamen(hracuv_tah[0], hracuv_tah[1])
+                list_posunu.remove(vzdalenost)
+            else:
+                # komplexní move() (více jak 2x move)
+                pass
                 
-                # odečetení od listu_posunu
-
-                self.vypis_hru(barva_hrace, vysledek_kostky, list_posunu, legal_moves)
+            legal_moves = self.get_legal_moves(list_posunu, barva_hrace)
+            self.vypis_hru(barva_hrace, vysledek_kostky, list_posunu, legal_moves)    
         else:
             self.next_player()
             # novy tah
@@ -65,6 +76,9 @@ class Hra:
 
     def next_player(self) -> None:
         self._current_player = (self._current_player + 1) % len(self._hraci)
+
+    def get_legal_moves(self, list_posunu: list, barva_hrace: str) -> dict:
+        return self._herni_deska.get_legal_moves(list_posunu, barva_hrace)
 
     def modify_list_posunu(self, barva_hrace: str, list_posunu: int) -> list:
         return [-x for x in list_posunu] if barva_hrace == "Bila" else list_posunu
@@ -98,12 +112,19 @@ class Herni_Deska:
             for _ in range(new_bily_kameny[i]):
                     self._herni_pole[i].vloz_kamen(Kamen("Bila", i)) 
 
+    def move_kamen_from_bar(self, barva: Any, nova_pozice_kamene: int) -> None:
+        kamen1 = self._bar.vytahni_kamen_z_baru(barva)
+        if self.muze_byt_vyhozen(kamen1.barva_kamene, nova_pozice_kamene):
+            self.vyhod_kamen(nova_pozice_kamene)
+        self._herni_pole[nova_pozice_kamene].vloz_kamen(kamen1)
+        kamen1.zapis_pozici_do_historie(nova_pozice_kamene)    
+
     def move_kamen(self, aktualni_pozice_kamene: int, nova_pozice_kamene: int) -> None:
         # pop kamen z pole1
         # pokud je v poli právě jeden kámen s opačnou barvou -> vyhodit 
         # push kamen do pol2
         kamen1 = self._herni_pole[aktualni_pozice_kamene].vytahni_kamen()
-        if self.muze_byt_vyhozen(aktualni_pozice_kamene, nova_pozice_kamene):
+        if self.muze_byt_vyhozen(kamen1.barva_kamene, nova_pozice_kamene):
             self.vyhod_kamen(nova_pozice_kamene)
         self._herni_pole[nova_pozice_kamene].vloz_kamen(kamen1)
         kamen1.zapis_pozici_do_historie(nova_pozice_kamene)    
@@ -115,8 +136,8 @@ class Herni_Deska:
         # pokud je v baru kámen
         if self._bar.vrat_pocet_kamenu_v_baru(hrac_na_tahu) > 0:
             # pole je 0 nebo len(self._herni_deksa)
-            start = -1 if hrac_na_tahu == "Bila" else len(self._herni_pole)-1
-            valid_moves["Bar"] = self.calculate_legal_moves(start, list_posunu, hrac_na_tahu)
+            start = -1 if hrac_na_tahu == "Cerna" else len(self._herni_pole)
+            valid_moves[start] = self.calculate_legal_moves(start, list_posunu, hrac_na_tahu)
         else:
             for pole in self._herni_pole:
                 if pole.get_velikost() >= 1:
@@ -129,7 +150,7 @@ class Herni_Deska:
         # pokud list_posunu obsahuje stejná čísla nebo 1 číslo
         if len(set(list_posunu)) == 1:                                           
             posuny = [x * list_posunu[0] for x in range(1, len(list_posunu)+1)]
-            for posun in range(posuny):
+            for posun in posuny:
                 # print(pole.cislo_pole + posun)
                 if self.is_valid_move(cislo_pole + posun, hrac_na_tahu):
                     list_of_moves.append(cislo_pole + posun)
@@ -150,10 +171,9 @@ class Herni_Deska:
         druhy_pole = self._herni_pole[stone_to]
         return druhy_pole.get_velikost() <= 1 or (barva_hrace == druhy_pole.get_kamen().barva_kamene and druhy_pole.get_velikost() < 5)  
 
-    def muze_byt_vyhozen(self, stone_from: int, stone_to: int) -> bool:
-        prvni_pole = self._herni_pole[stone_from]
+    def muze_byt_vyhozen(self, barva_kamene: str, stone_to: int) -> bool:
         druhy_pole = self._herni_pole[stone_to]
-        return druhy_pole.get_velikost() == 1 and prvni_pole.get_kamen().barva_kamene != druhy_pole.get_kamen().barva_kamene
+        return druhy_pole.get_velikost() == 1 and barva_kamene != druhy_pole.get_kamen().barva_kamene
 
     def vyhod_kamen(self, pozice_kamene) -> None:
         kamen = self._herni_pole[pozice_kamene].vytahni_kamen()
@@ -239,13 +259,8 @@ class Bar:
     def vrat_pocet_kamenu_v_baru(self, barva):
         return len(self._bily_kameny) if barva == "Bila" else len(self._cerny_kameny)
 
-    def vrat_bily_kamen(self) -> Kamen:
-        pass
-        #return Kamen("")
-
-    def vrat_cerny_kamen(self) -> Kamen:
-        pass
-        #return Kamen("")
+    def vytahni_kamen_z_baru(self, barva) -> Kamen:
+        return self._bily_kameny.pop() if barva == "Bila" else self._cerny_kameny.pop()
 
     def __str__(self) -> str:
         return f"Na baru je {len(self._bily_kameny)} bilých a {len(self._cerny_kameny)} černých kamenů"
@@ -276,7 +291,7 @@ class Konzolovy_Hrac(Hrac):
     def __init__(self, barva_hrace) -> None:
         super().__init__(barva_hrace)
 
-    def hrat_tah(self, vysledek_dvojkostky: list, legal_moves: dict) -> list:
+    def hrat_tah(self, legal_moves: dict) -> list:
         tah = list(map(int, input("Zadej tah: ").split(',')))
         while True:
             for key, values in legal_moves.items():
