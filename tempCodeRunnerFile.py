@@ -1,1 +1,1 @@
-kamen1 = self._herni_pole[aktualni_pozice_kamene].vytahni_kamen()
+aktualni_pozice_kamene: int
