@@ -7,13 +7,14 @@ def main():
     # if x == '':
     # jaky_protihrac = input("Hrat proti AI/PC:" )
     # if jaky_protihrac.lower() == 'AI':
-    hrac = Konzolovy_Hrac("Cerna", -1)
-    protihrac = Konzolovy_Hrac("Bila", 24)
+    hrac = Konzolovy_Hrac("Cerna", 0)
+    protihrac = Konzolovy_Hrac("Bila", 25)
     hra = Hra(hrac, protihrac)
     # LOAD / NOVA HRA
 
 def nahodna_barva_hrace() -> str:
     return random.choices(["Cerna", "Bila"])
+
 
 class Hra:
     def __init__(self, hrac: Any, protihrac: Any) -> None:
@@ -51,6 +52,7 @@ class Hra:
                 list_posunu.remove(vzdalenost)
             else:
                 # komplexní move() (více jak 2x move)
+                self._herni_deska.is_valid_move()
                 pass
                 
             legal_moves = self.get_legal_moves(list_posunu, curr_player)
@@ -84,18 +86,20 @@ class Herni_Deska:
 
     def vytvor_herni_pole(self) -> list:
         herni_pole = []
-        for i in range(24):
+        herni_pole.append(Domecek(0, 15))
+        for i in range(1, 24+1):
             herni_pole.append(Herni_Pole(i))
+        herni_pole.append(Domecek(25, 15))
         return herni_pole
 
     def vytvor_kameny(self) -> None:
-        kameny = [2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 0, 0, 0, 0, 3, 0, 5, 0, 0, 0, 0, 0]
+        #kameny = [0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 0, 0, 0, 0, 3, 0, 5, 0, 0, 0, 0, 0, 0]
+        kameny = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 3, 3, 0]
         for i in range(len(kameny)):
             for _ in range(kameny[i]):
                     self._herni_pole[i].vloz_kamen(Kamen("Cerna", i))
                     self._herni_pole[len(kameny) - i - 1].vloz_kamen(Kamen("Bila", i))    
    
-    # PŘEDĚLAT
     def move_kamen(self, aktualni_pozice: int, nova_pozice: int, hrac, protihrac) -> None:
         kamen1 = None
         if aktualni_pozice == hrac.bar.cislo_pole:
@@ -117,7 +121,7 @@ class Herni_Deska:
         if hrac.bar.get_velikost() > 0:
             valid_moves["Bar"] = self.calculate_legal_moves(hrac.bar.cislo_pole, list_posunu, hrac.barva_hrace)
         else:
-            for pole in self._herni_pole:
+            for pole in self._herni_pole[1:-1]:
                 if pole.get_velikost() >= 1:
                     if pole.get_kamen().barva_kamene == hrac.barva_hrace:
                         valid_moves[pole.cislo_pole] = self.calculate_legal_moves(pole.cislo_pole, list_posunu, hrac.barva_hrace)
@@ -143,10 +147,34 @@ class Herni_Deska:
         return list_of_moves
 
     def is_valid_move(self, stone_to: int, barva_hrace: str) -> bool:
-        if stone_to > len(self._herni_pole) - 1 or stone_to < 0:
+        if stone_to < 0 or stone_to > len(self._herni_pole) - 1:
             return False
-        druhy_pole = self._herni_pole[stone_to]
-        return druhy_pole.get_velikost() <= 1 or (barva_hrace == druhy_pole.get_kamen().barva_kamene and druhy_pole.get_velikost() < 5)  
+        if stone_to in [0, 25] and self.muze_jit_do_domecku(barva_hrace):
+            return True
+        elif not stone_to in [0, 25]:
+            druhy_pole = self._herni_pole[stone_to]
+            return druhy_pole.get_velikost() <= 1 or (barva_hrace == druhy_pole.get_kamen().barva_kamene and druhy_pole.get_velikost() < 5)
+
+    # PREDELAT
+    def muze_jit_do_domecku(self, barva_hrace: str) -> bool:
+        # checknout jestli jsou v posledním kvadrantu všechny kameny
+        # only in 1-6 white
+        # only in 19-24 black
+        if barva_hrace == "Bila":
+            for pole in self._herni_pole[1:-1]:
+                if not pole.je_prazdny():
+                    if pole.get_kamen().barva_kamene == barva_hrace:
+                        if pole.cislo_pole > 6:
+                            return False
+            return True
+        else:
+            for pole in self._herni_pole[1:-1]:
+                if pole.get_velikost() >= 1:
+                    if pole.get_kamen().barva_kamene == barva_hrace:
+                        if pole.cislo_pole < 19:
+                            print("INVALID MOVE")
+                            return False
+            return True
 
     def muze_byt_vyhozen(self, barva_kamene: str, stone_to: int) -> bool:
         druhy_pole = self._herni_pole[stone_to]
@@ -222,11 +250,19 @@ class Herni_Pole:
 
 
 class Bar(Herni_Pole):
-    def __init__(self, i: int, max_size) -> None:
+    def __init__(self, i: int, max_size: int) -> None:
         super().__init__(i, max_size)
 
     def __str__(self) -> str:
         return f"Na baru je {self.get_velikost()} kamenů"
+    
+
+class Domecek(Herni_Pole):
+    def __init__(self, i: int, max_size: int) -> None:
+        super().__init__(i, max_size)
+
+    def __str__(self) -> str:
+        return f"Home: {self.get_velikost()}"
 
 
 class Hrac:
