@@ -150,7 +150,7 @@ class Hra:
             ukoncit_hru = input("Pro ukonceni napiste 'ukoncit': ")
 
     def je_vyhra(self, herni_pole, hrac_na_tahu, protihrac):
-        if herni_pole[hrac_na_tahu.index_domecku()].get_velikost() == 1:
+        if herni_pole[hrac_na_tahu.index_domecku()].get_velikost() == 15:
             self._zapni_hru = False
             s = f"Vyhrál hráč {hrac_na_tahu.barva_hrace} s typem výhry "
             if herni_pole[protihrac.index_domecku()].get_velikost() == 0 and protihrac.bar.get_velikost() > 0:
@@ -190,8 +190,8 @@ class Herni_Deska:
         return herni_pole
 
     def vytvor_kameny(self) -> None:
-        #kameny = [0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 0, 0, 0, 0, 3, 0, 5, 0, 0, 0, 0, 0, 0]
-        kameny = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+        kameny = [0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 0, 0, 0, 0, 3, 0, 5, 0, 0, 0, 0, 0, 0]
+        #kameny = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
         for i in range(len(kameny)):
             for _ in range(kameny[i]):
                     self._herni_pole[i].vloz_kamen(Kamen("Cerna", i))
