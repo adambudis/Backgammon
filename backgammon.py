@@ -22,14 +22,22 @@ def main():
         hra = Hra(pridej_hrace(hrac, protihrac))
     else:
         # load hry
-        pass
+        # extrahovat z json
 
-def save_file():
-    pass
+        # herni_deska - Kamen - barva_kamene, historie[-1], historie 
 
-
-def load_file():
-    pass
+        data = json.load(open('vrhcaby.json'))
+        hraci = []
+        for hrac in data['hraci']:
+            new_hrac = None
+            if hrac['typ_hrace'] == 'Konzolovy_Hrac':
+                new_hrac = Konzolovy_Hrac(hrac["barva_hrace"], hrac['index_baru'], hrac['vyhozeno_kamenu'])
+            else:
+                new_hrac = AIHrac(hrac["barva_hrace"], hrac['index_baru'], hrac['vyhozeno_kamenu'])
+            for _ in range(hrac['pocet_na_baru']):
+                new_hrac.bar.vloz_kamen(Kamen(hrac["barva_hrace"], "Bar"))
+            hraci.append(new_hrac)
+        hra = Hra(hraci, data['list_kamenu'], data['hrac_na_tahu'], data['list_posunu'])
 
 
 def nahodna_barva_hrace() -> str:
@@ -49,25 +57,24 @@ def pridej_hrace(hrac1, hrac2) -> list:
 
 
 class Hra:
-    def __init__(self, hraci: Any) -> None:
+    def __init__(self, hraci: Any, list_kamenu=[], current_player=0, list_posunu=[]) -> None:
         self._herni_deska = Herni_Deska()
-        self._herni_deska.vytvor_kameny()
+        self._herni_deska.vytvor_kameny(list_kamenu)
         self._dvojkostka = Dvojkostka()
         self._hraci = hraci
-        self._current_player = 0
+        self._current_player = current_player
         self._zapni_hru = True
-        self.zapni_hru()
+        self.zapni_hru(list_posunu)
 
-    def zapni_hru(self) -> None:
+    def zapni_hru(self, load_list_posunu) -> None:
         while self._zapni_hru:
-            self.zacatek_novyho_tahu()
+            self.zacatek_novyho_tahu(load_list_posunu)
         else:
             self.vypis_statistiky(self._hraci, self._herni_deska.herni_pole)
 
-    def zacatek_novyho_tahu(self) -> None:    
+    def zacatek_novyho_tahu(self, load_list_posunu) -> None:    
         curr_player = self._hraci[self._current_player]
         vysledek_kostky = self._dvojkostka.hod_dvojkostkou()
-        #vysledek_kostky = [1,1,1,1]
         list_posunu = self.modify_list_posunu(curr_player.barva_hrace, list(vysledek_kostky))
         legal_moves = self.get_legal_moves(list_posunu, self._hraci[self._current_player])
         self.vypis_hru(curr_player, self._hraci[self.next_player()], vysledek_kostky, list_posunu, legal_moves)
@@ -85,7 +92,10 @@ class Hra:
                 self._zapni_hru = False
                 break
             if tah == "ulozit":
-                self.ulozit_hru()
+                self.ulozit_hru(self._herni_deska.herni_pole, self._hraci, self._current_player, list_posunu, vysledek_kostky)
+                while tah == "ulozit":
+                    print("HRA ULOZENA")
+                    tah = curr_player.hrat_tah(legal_moves)
 
             aktulani_pozice, nova_pozice = tah
             # odečetení od listu_posunu
@@ -161,8 +171,41 @@ class Hra:
                 s += "běžná výhra"
             print(s)
 
-    def ulozit_hru(self):
-        pass
+    def ulozit_hru(self, herni_pole, hraci, hrac_na_tahu, list_posunu, cislo_na_kostce):
+
+        list_kamenu = []
+        for pole in herni_pole:
+            for stone in pole.kameny:
+                kamen = {
+                    "barva_kamene": stone.barva_kamene,
+                    "historie": stone.historie
+                }
+                list_kamenu.append(kamen)
+
+        list_hracu = []
+        for hrac in hraci:
+            typ_hrace = "Konzolovy_Hrac" if Konzolovy_Hrac is type(hrac) else "AIHrac" 
+            list_hracu.append({
+                "barva_hrace": hrac.barva_hrace,
+                "vyhozeno_kamenu": hrac.vyhozeno_kamenu,
+                "index_baru": hrac.bar.cislo_pole,
+                "pocet_na_baru": hrac.bar.get_velikost(),
+                "typ_hrace": typ_hrace
+            })
+                    
+        slovnik = {
+            "hrac_na_tahu": hrac_na_tahu,
+            "list_posunu": list_posunu,
+            "cisla_na_kostce": cislo_na_kostce,
+            "hraci": list_hracu,
+            "list_kamenu": list_kamenu
+        }
+
+        
+        json_objects = json.dumps(slovnik, indent=4)
+
+        with open("vrhcaby.json", "w") as soubor:
+            soubor.write(json_objects)
 
     def next_player(self):
         return (self._current_player + 1) % len(self._hraci)
@@ -189,13 +232,20 @@ class Herni_Deska:
         herni_pole.append(Domecek(25, 15))
         return herni_pole
 
-    def vytvor_kameny(self) -> None:
-        kameny = [0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 0, 0, 0, 0, 3, 0, 5, 0, 0, 0, 0, 0, 0]
-        #kameny = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-        for i in range(len(kameny)):
-            for _ in range(kameny[i]):
-                    self._herni_pole[i].vloz_kamen(Kamen("Cerna", i))
-                    self._herni_pole[len(kameny) - i - 1].vloz_kamen(Kamen("Bila", i))    
+    def vytvor_kameny(self, list_kamenu: list) -> None:
+        if len(list_kamenu) == 0:
+            kameny = [0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 0, 0, 0, 0, 3, 0, 5, 0, 0, 0, 0, 0, 0]
+            #kameny = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+            for i in range(len(kameny)):
+                for _ in range(kameny[i]):
+                        self._herni_pole[i].vloz_kamen(Kamen("Cerna", i, []))
+                        self._herni_pole[len(kameny) - i - 1].vloz_kamen(Kamen("Bila", len(kameny) - i - 1, []))
+        else:
+            for kamen in list_kamenu:
+                barva_kamene = kamen['barva_kamene']
+                historie = kamen['historie']
+                pozice_kamene = historie[-1]
+                self._herni_pole[pozice_kamene].vloz_kamen(Kamen(barva_kamene, pozice_kamene, historie))
    
     def presun_kamen(self, aktualni_pozice: int, nova_pozice: int, hrac, protihrac) -> None:
         kamen1 = None
@@ -290,10 +340,10 @@ class Herni_Deska:
 
 
 class Kamen:
-    def __init__(self, barva_kamene: str, pozice_kamene: int) -> None:
+    def __init__(self, barva_kamene: str, pozice_kamene: int, historie) -> None:
         self._barva_kamene = barva_kamene
-        self._historie = []
-        self._historie.append(pozice_kamene)
+        self._historie = historie
+        self.zapis_pozici_do_historie(pozice_kamene)
 
     @property
     def barva_kamene(self) -> str:
@@ -310,7 +360,12 @@ class Kamen:
         return self._historie[-1]
 
     def zapis_pozici_do_historie(self, nova_pozice: Any) -> None:
-        self._historie.append(nova_pozice)
+        if len(self._historie) != 0:
+            if self._historie[-1] != nova_pozice:
+                self._historie.append(nova_pozice)
+                return
+        else:
+            self._historie.append(nova_pozice)
 
     def __str__(self) -> str:
         return f"{self._barva_kamene}"
@@ -398,8 +453,8 @@ class Hrac:
 
 
 class Konzolovy_Hrac(Hrac):
-    def __init__(self, barva_hrace, index_baru) -> None:
-        super().__init__(barva_hrace, index_baru)
+    def __init__(self, barva_hrace, index_baru, vyhozeno_kamenu=0) -> None:
+        super().__init__(barva_hrace, index_baru, vyhozeno_kamenu)
 
     def hrat_tah(self, legal_moves: dict) -> Any:
         tah = check_input(input("Zadej tah: ").split(','))
@@ -416,8 +471,8 @@ class Konzolovy_Hrac(Hrac):
 
 
 class AIHrac(Hrac):
-    def __init__(self, barva_hrace, index_baru) -> None:
-        super().__init__(barva_hrace, index_baru)
+    def __init__(self, barva_hrace, index_baru, vyhozeno_kamenu=0) -> None:
+        super().__init__(barva_hrace, index_baru, vyhozeno_kamenu)
 
     def hrat_tah(self, legal_moves: dict) -> list:
         random_key = random.choice(list(legal_moves.keys()))
