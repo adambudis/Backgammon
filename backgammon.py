@@ -10,8 +10,8 @@ def main():
     while vstup not in ['vrhcaby.json', 'nova hra']:
         vstup = input("Spatny vstup zkuste: 'vrhcaby.json' k nacteni nebo 'nova hra' k nove hre: ")
     if vstup == 'nova hra':
-        jaky_protihrac = input("Hrat proti AI nebo clovek: ")
-        while jaky_protihrac not in ['clovek', 'ai']:
+        jaky_protihrac = input("Hrat proti ai nebo clovek: ")
+        while jaky_protihrac.lower() not in ['clovek', 'ai']:
             jaky_protihrac = input("Spatny vstup zkuste: AI nebo clovek: ")
         if jaky_protihrac.lower() == 'clovek':
             protihrac = Konzolovy_Hrac(prvni[0], prvni[1])
@@ -35,7 +35,7 @@ def main():
             else:
                 new_hrac = AIHrac(hrac["barva_hrace"], hrac['index_baru'], hrac['vyhozeno_kamenu'])
             for _ in range(hrac['pocet_na_baru']):
-                new_hrac.bar.vloz_kamen(Kamen(hrac["barva_hrace"], "Bar"))
+                new_hrac.bar.vloz_kamen(Kamen(hrac["barva_hrace"], "Bar", ["Bar"]))
             hraci.append(new_hrac)
         hra = Hra(hraci, data['list_kamenu'], data['hrac_na_tahu'], data['list_posunu'], data["vysledek_kostky"])
 
@@ -90,46 +90,38 @@ class Hra:
             # str, str, list[int, int]
             tah = curr_player.hrat_tah(legal_moves)
 
-            if tah == "ukoncit":
-                self._zapni_hru = False
-                break
             if tah == "ulozit":
                 self.ulozit_hru(self._herni_deska.herni_pole, self._hraci, self._current_player, list_posunu, self._vysledek_dvojkostky)
                 while tah == "ulozit":
                     print("HRA ULOZENA")
                     tah = curr_player.hrat_tah(legal_moves)
-                    if tah == "ukoncit":
-                        self._zapni_hru = False
-                        break
+            if tah == "ukoncit":
+                self._zapni_hru = False
+                break
+            
+            aktualni_pozice, nova_pozice = tah
 
-            aktulani_pozice, nova_pozice = tah
-            # odečetení od listu_posunu
-            vzdalenost = nova_pozice - aktulani_pozice
+            vzdalenost = nova_pozice - aktualni_pozice
             if vzdalenost in list_posunu:
-                # JINEJ MOVE PRI MOVE Z BARU
-                self._herni_deska.presun_kamen(aktulani_pozice, nova_pozice, curr_player, self._hraci[self.next_player()])
-                    
+                # odečetení od listu_posunu
+                self._herni_deska.presun_kamen(aktualni_pozice, nova_pozice, curr_player, self._hraci[self.next_player()])
                 list_posunu.remove(vzdalenost)
             else:
                 if len(set(list_posunu)) == 1:
                     pocet = vzdalenost / list_posunu[0]
                     while pocet > 0:
-                        nova_pozice = legal_moves.get(aktulani_pozice)[0]
-                        #print(f"{budouci_pozice, aktulani_pozice}")
-                        #print(f"LEGAL MOVES: {legal_moves.get(aktulani_pozice)}")
-                        self._herni_deska.presun_kamen(aktulani_pozice, nova_pozice, curr_player, self._hraci[self.next_player()])
-                        list_posunu.remove(nova_pozice - aktulani_pozice)
-                        aktulani_pozice = nova_pozice
+                        nova_pozice = self.vrat_novou_pozici(legal_moves, aktualni_pozice)
+                        self._herni_deska.presun_kamen(aktualni_pozice, nova_pozice, curr_player, self._hraci[self.next_player()])
+                        list_posunu.remove(nova_pozice - aktualni_pozice)
+                        aktualni_pozice = nova_pozice
                         legal_moves = self.get_legal_moves(list_posunu, curr_player)
                         pocet -= 1
                 else:
                     while len(list_posunu) != 0:
-                        nova_pozice = legal_moves.get(aktulani_pozice)[0]
-                        #print(f"{budouci_pozice, aktulani_pozice}")
-                        #print(f"LEGAL MOVES: {legal_moves.get(aktulani_pozice)}")
-                        self._herni_deska.presun_kamen(aktulani_pozice, nova_pozice, curr_player, self._hraci[self.next_player()])
-                        list_posunu.remove(nova_pozice - aktulani_pozice)
-                        aktulani_pozice = nova_pozice
+                        nova_pozice = self.vrat_novou_pozici(legal_moves, aktualni_pozice)
+                        self._herni_deska.presun_kamen(aktualni_pozice, nova_pozice, curr_player, self._hraci[self.next_player()])
+                        list_posunu.remove(nova_pozice - aktualni_pozice)
+                        aktualni_pozice = nova_pozice
                         legal_moves = self.get_legal_moves(list_posunu, curr_player)
                 
             legal_moves = self.get_legal_moves(list_posunu, curr_player)
@@ -142,9 +134,11 @@ class Hra:
     def zacatek_novyho_tahu(self) -> None:    
         curr_player = self._hraci[self._current_player]
         self._vysledek_dvojkostky = self._dvojkostka.hod_dvojkostkou()
+        #self._vysledek_dvojkostky = [1, 1, 1, 1]
         list_posunu = self.modify_list_posunu(curr_player.barva_hrace, list(self._vysledek_dvojkostky))
+        legal_moves = self.get_legal_moves(list_posunu, curr_player)
+        self.vypis_hru(curr_player, self._hraci[self.next_player()], list_posunu, legal_moves)
         return list_posunu
-        
 
     def vypis_hru(self, curr_player: Any, next_player: Any, list_posunu: list, legal_moves: dict) -> None:
         print("---------------------------------------------------------")
@@ -212,7 +206,6 @@ class Hra:
             "hraci": list_hracu,
             "list_kamenu": list_kamenu
         }
-
         
         json_objects = json.dumps(slovnik, indent=4)
 
@@ -227,6 +220,11 @@ class Hra:
 
     def modify_list_posunu(self, barva_hrace: str, list_posunu: int) -> list:
         return [-x for x in list_posunu] if barva_hrace == "Bila" else list_posunu
+    
+    def vrat_novou_pozici(self, legal_moves, aktualni_pozice):
+        if aktualni_pozice in [0, 25]:
+            aktualni_pozice = "Bar"
+        return legal_moves.get(aktualni_pozice)[0]
 
 class Herni_Deska:
     def __init__(self) -> None:
@@ -247,7 +245,7 @@ class Herni_Deska:
     def vytvor_kameny(self, list_kamenu: list) -> None:
         if len(list_kamenu) == 0:
             kameny = [0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 0, 0, 0, 0, 3, 0, 5, 0, 0, 0, 0, 0, 0]
-            #kameny = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+            #kameny = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
             for i in range(len(kameny)):
                 for _ in range(kameny[i]):
                         self._herni_pole[i].vloz_kamen(Kamen("Cerna", i, []))
@@ -272,6 +270,7 @@ class Herni_Deska:
 
         self._herni_pole[nova_pozice].vloz_kamen(kamen1)
         kamen1.zapis_pozici_do_historie(nova_pozice)    
+        print(f"KAMEN SE POHNUL Z {aktualni_pozice} na {nova_pozice}")
 
     def get_legal_moves(self, list_posunu: list, hrac: Any) -> dict:
         # list_posunu -> [4, 6],[4, 6, 10] or [2, 2, 2, 2],[2, 4, 6, 8]
@@ -284,7 +283,9 @@ class Herni_Deska:
             for pole in self._herni_pole[1:-1]:
                 if pole.get_velikost() >= 1:
                     if pole.get_kamen().barva_kamene == hrac.barva_hrace:
-                        valid_moves[pole.cislo_pole] = self.calculate_legal_moves(pole.cislo_pole, list_posunu, hrac.barva_hrace)
+                        moves = self.calculate_legal_moves(pole.cislo_pole, list_posunu, hrac.barva_hrace)
+                        if len(moves) != 0:
+                            valid_moves[pole.cislo_pole] = moves
         return valid_moves
     
     def calculate_legal_moves(self, cislo_pole: int, list_posunu: list, hrac_na_tahu: str) -> list:

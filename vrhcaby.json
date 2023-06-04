@@ -1,143 +1,217 @@
 {
-  "hrac_na_tahu": 0,
-  "list_posunu": [-5],
-  "vysledek_kostky": [5, 3],
-  "hraci": [
-    {
-      "barva_hrace": "Bila",
-      "vyhozeno_kamenu": 0,
-      "index_baru": 25,
-      "pocet_na_baru": 0,
-      "typ_hrace": "Konzolovy_Hrac"
-    },
-    {
-      "barva_hrace": "Cerna",
-      "vyhozeno_kamenu": 0,
-      "index_baru": 0,
-      "pocet_na_baru": 0,
-      "typ_hrace": "Konzolovy_Hrac"
-    }
-  ],
-  "list_kamenu": [
-    {
-      "barva_kamene": "Cerna",
-      "historie": [1]
-    },
-    {
-      "barva_kamene": "Cerna",
-      "historie": [1]
-    },
-    {
-      "barva_kamene": "Bila",
-      "historie": [6, 3]
-    },
-    {
-      "barva_kamene": "Bila",
-      "historie": [6]
-    },
-    {
-      "barva_kamene": "Bila",
-      "historie": [6]
-    },
-    {
-      "barva_kamene": "Bila",
-      "historie": [6]
-    },
-    {
-      "barva_kamene": "Bila",
-      "historie": [6]
-    },
-    {
-      "barva_kamene": "Bila",
-      "historie": [8]
-    },
-    {
-      "barva_kamene": "Bila",
-      "historie": [8]
-    },
-    {
-      "barva_kamene": "Bila",
-      "historie": [8]
-    },
-    {
-      "barva_kamene": "Cerna",
-      "historie": [12]
-    },
-    {
-      "barva_kamene": "Cerna",
-      "historie": [12]
-    },
-    {
-      "barva_kamene": "Cerna",
-      "historie": [12]
-    },
-    {
-      "barva_kamene": "Cerna",
-      "historie": [12]
-    },
-    {
-      "barva_kamene": "Cerna",
-      "historie": [12]
-    },
-    {
-      "barva_kamene": "Bila",
-      "historie": [13]
-    },
-    {
-      "barva_kamene": "Bila",
-      "historie": [13]
-    },
-    {
-      "barva_kamene": "Bila",
-      "historie": [13]
-    },
-    {
-      "barva_kamene": "Bila",
-      "historie": [13]
-    },
-    {
-      "barva_kamene": "Bila",
-      "historie": [13]
-    },
-    {
-      "barva_kamene": "Cerna",
-      "historie": [17]
-    },
-    {
-      "barva_kamene": "Cerna",
-      "historie": [17]
-    },
-    {
-      "barva_kamene": "Cerna",
-      "historie": [17]
-    },
-    {
-      "barva_kamene": "Cerna",
-      "historie": [19]
-    },
-    {
-      "barva_kamene": "Cerna",
-      "historie": [19]
-    },
-    {
-      "barva_kamene": "Cerna",
-      "historie": [19]
-    },
-    {
-      "barva_kamene": "Cerna",
-      "historie": [19]
-    },
-    {
-      "barva_kamene": "Cerna",
-      "historie": [19]
-    },
-    {
-      "barva_kamene": "Bila",
-      "historie": [24]
-    },
-    {
-      "barva_kamene": "Bila",
-      "historie": [24]
-    }
-  ]
+    "hrac_na_tahu": 0,
+    "list_posunu": [
+        -4,
+        -5
+    ],
+    "vysledek_kostky": [
+        4,
+        5
+    ],
+    "hraci": [
+        {
+            "barva_hrace": "Bila",
+            "vyhozeno_kamenu": 0,
+            "index_baru": 25,
+            "pocet_na_baru": 0,
+            "typ_hrace": "Konzolovy_Hrac"
+        },
+        {
+            "barva_hrace": "Cerna",
+            "vyhozeno_kamenu": 1,
+            "index_baru": 0,
+            "pocet_na_baru": 0,
+            "typ_hrace": "Konzolovy_Hrac"
+        }
+    ],
+    "list_kamenu": [
+        {
+            "barva_kamene": "Bila",
+            "historie": [
+                6,
+                2,
+                1
+            ]
+        },
+        {
+            "barva_kamene": "Bila",
+            "historie": [
+                6,
+                3,
+                1
+            ]
+        },
+        {
+            "barva_kamene": "Bila",
+            "historie": [
+                6
+            ]
+        },
+        {
+            "barva_kamene": "Bila",
+            "historie": [
+                6
+            ]
+        },
+        {
+            "barva_kamene": "Bila",
+            "historie": [
+                6
+            ]
+        },
+        {
+            "barva_kamene": "Bila",
+            "historie": [
+                8
+            ]
+        },
+        {
+            "barva_kamene": "Bila",
+            "historie": [
+                8
+            ]
+        },
+        {
+            "barva_kamene": "Bila",
+            "historie": [
+                8
+            ]
+        },
+        {
+            "barva_kamene": "Cerna",
+            "historie": [
+                "Bar",
+                5,
+                9
+            ]
+        },
+        {
+            "barva_kamene": "Cerna",
+            "historie": [
+                1,
+                4,
+                10
+            ]
+        },
+        {
+            "barva_kamene": "Cerna",
+            "historie": [
+                12
+            ]
+        },
+        {
+            "barva_kamene": "Cerna",
+            "historie": [
+                12
+            ]
+        },
+        {
+            "barva_kamene": "Cerna",
+            "historie": [
+                12
+            ]
+        },
+        {
+            "barva_kamene": "Cerna",
+            "historie": [
+                12
+            ]
+        },
+        {
+            "barva_kamene": "Cerna",
+            "historie": [
+                12
+            ]
+        },
+        {
+            "barva_kamene": "Bila",
+            "historie": [
+                13
+            ]
+        },
+        {
+            "barva_kamene": "Bila",
+            "historie": [
+                13
+            ]
+        },
+        {
+            "barva_kamene": "Bila",
+            "historie": [
+                13
+            ]
+        },
+        {
+            "barva_kamene": "Bila",
+            "historie": [
+                13
+            ]
+        },
+        {
+            "barva_kamene": "Bila",
+            "historie": [
+                13
+            ]
+        },
+        {
+            "barva_kamene": "Cerna",
+            "historie": [
+                17
+            ]
+        },
+        {
+            "barva_kamene": "Cerna",
+            "historie": [
+                17
+            ]
+        },
+        {
+            "barva_kamene": "Cerna",
+            "historie": [
+                17
+            ]
+        },
+        {
+            "barva_kamene": "Cerna",
+            "historie": [
+                19
+            ]
+        },
+        {
+            "barva_kamene": "Cerna",
+            "historie": [
+                19
+            ]
+        },
+        {
+            "barva_kamene": "Cerna",
+            "historie": [
+                19
+            ]
+        },
+        {
+            "barva_kamene": "Cerna",
+            "historie": [
+                19
+            ]
+        },
+        {
+            "barva_kamene": "Cerna",
+            "historie": [
+                19
+            ]
+        },
+        {
+            "barva_kamene": "Bila",
+            "historie": [
+                24
+            ]
+        },
+        {
+            "barva_kamene": "Bila",
+            "historie": [
+                24
+            ]
+        }
+    ]
 }
