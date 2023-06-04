@@ -118,10 +118,11 @@ class Hra:
                         legal_moves = self.get_legal_moves(list_posunu, curr_player)
                 
             legal_moves = self.get_legal_moves(list_posunu, curr_player)
-            self.vypis_hru(curr_player, self._hraci[self.next_player()], vysledek_kostky, list_posunu, legal_moves)    
-        else:
-            self._current_player = self.next_player()
-            # novy tah
+            self.vypis_hru(curr_player, self._hraci[self.next_player()], vysledek_kostky, list_posunu, legal_moves) 
+
+            self.je_vyhra(self._herni_deska.herni_pole, curr_player, self._hraci[self.next_player()])
+
+        self._current_player = self.next_player()
 
     def vypis_hru(self, curr_player: Any, next_player: Any, vysledek_kostky: list, list_posunu: list, legal_moves: dict) -> None:
         print("---------------------------------------------------------")
@@ -147,6 +148,18 @@ class Hra:
         ukoncit_hru = input("Pro ukonceni napiste 'ukoncit': ")
         while ukoncit_hru != "ukoncit":
             ukoncit_hru = input("Pro ukonceni napiste 'ukoncit': ")
+
+    def je_vyhra(self, herni_pole, hrac_na_tahu, protihrac):
+        if herni_pole[hrac_na_tahu.index_domecku()].get_velikost() == 1:
+            self._zapni_hru = False
+            s = f"Vyhrál hráč {hrac_na_tahu.barva_hrace} s typem výhry "
+            if herni_pole[protihrac.index_domecku()].get_velikost() == 0 and protihrac.bar.get_velikost() > 0:
+                s += "backgammon"
+            elif herni_pole[protihrac.index_domecku()].get_velikost() == 0:
+                s += "gammon"
+            else:
+                s += "běžná výhra"
+            print(s)
 
     def ulozit_hru(self):
         pass
@@ -178,7 +191,7 @@ class Herni_Deska:
 
     def vytvor_kameny(self) -> None:
         #kameny = [0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 0, 0, 0, 0, 3, 0, 5, 0, 0, 0, 0, 0, 0]
-        kameny = [0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+        kameny = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
         for i in range(len(kameny)):
             for _ in range(kameny[i]):
                     self._herni_pole[i].vloz_kamen(Kamen("Cerna", i))
