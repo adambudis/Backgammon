@@ -37,7 +37,7 @@ def main():
             for _ in range(hrac['pocet_na_baru']):
                 new_hrac.bar.vloz_kamen(Kamen(hrac["barva_hrace"], "Bar"))
             hraci.append(new_hrac)
-        hra = Hra(hraci, data['list_kamenu'], data['hrac_na_tahu'], data['list_posunu'])
+        hra = Hra(hraci, data['list_kamenu'], data['hrac_na_tahu'], data['list_posunu'], data["vysledek_kostky"])
 
 
 def nahodna_barva_hrace() -> str:
@@ -57,27 +57,29 @@ def pridej_hrace(hrac1, hrac2) -> list:
 
 
 class Hra:
-    def __init__(self, hraci: Any, list_kamenu=[], current_player=0, list_posunu=[]) -> None:
+    def __init__(self, hraci: Any, list_kamenu=[], current_player=0, list_posunu=[], vysledek_kostky=[]) -> None:
         self._herni_deska = Herni_Deska()
         self._herni_deska.vytvor_kameny(list_kamenu)
         self._dvojkostka = Dvojkostka()
+        self._vysledek_dvojkostky = vysledek_kostky
         self._hraci = hraci
         self._current_player = current_player
         self._zapni_hru = True
         self.zapni_hru(list_posunu)
 
-    def zapni_hru(self, load_list_posunu) -> None:
+    def zapni_hru(self, load_list_posunu=[]) -> None:
+        if len(load_list_posunu) != 0:
+            self.dohraj_tah(load_list_posunu, self._hraci[self._current_player])
         while self._zapni_hru:
-            self.zacatek_novyho_tahu(load_list_posunu)
+            list_posunu = self.zacatek_novyho_tahu()
+            self.dohraj_tah(list_posunu, self._hraci[self._current_player])
         else:
             self.vypis_statistiky(self._hraci, self._herni_deska.herni_pole)
 
-    def zacatek_novyho_tahu(self, load_list_posunu) -> None:    
-        curr_player = self._hraci[self._current_player]
-        vysledek_kostky = self._dvojkostka.hod_dvojkostkou()
-        list_posunu = self.modify_list_posunu(curr_player.barva_hrace, list(vysledek_kostky))
-        legal_moves = self.get_legal_moves(list_posunu, self._hraci[self._current_player])
-        self.vypis_hru(curr_player, self._hraci[self.next_player()], vysledek_kostky, list_posunu, legal_moves)
+    def dohraj_tah(self, list_posunu, curr_player) -> None:
+        
+        legal_moves = self.get_legal_moves(list_posunu, curr_player)
+        self.vypis_hru(curr_player, self._hraci[self.next_player()], list_posunu, legal_moves)
 
         while len(list_posunu) != 0 and self._zapni_hru:
             
@@ -92,10 +94,13 @@ class Hra:
                 self._zapni_hru = False
                 break
             if tah == "ulozit":
-                self.ulozit_hru(self._herni_deska.herni_pole, self._hraci, self._current_player, list_posunu, vysledek_kostky)
+                self.ulozit_hru(self._herni_deska.herni_pole, self._hraci, self._current_player, list_posunu, self._vysledek_dvojkostky)
                 while tah == "ulozit":
                     print("HRA ULOZENA")
                     tah = curr_player.hrat_tah(legal_moves)
+                    if tah == "ukoncit":
+                        self._zapni_hru = False
+                        break
 
             aktulani_pozice, nova_pozice = tah
             # odečetení od listu_posunu
@@ -128,19 +133,26 @@ class Hra:
                         legal_moves = self.get_legal_moves(list_posunu, curr_player)
                 
             legal_moves = self.get_legal_moves(list_posunu, curr_player)
-            self.vypis_hru(curr_player, self._hraci[self.next_player()], vysledek_kostky, list_posunu, legal_moves) 
+            self.vypis_hru(curr_player, self._hraci[self.next_player()], list_posunu, legal_moves) 
 
             self.je_vyhra(self._herni_deska.herni_pole, curr_player, self._hraci[self.next_player()])
 
         self._current_player = self.next_player()
 
-    def vypis_hru(self, curr_player: Any, next_player: Any, vysledek_kostky: list, list_posunu: list, legal_moves: dict) -> None:
+    def zacatek_novyho_tahu(self) -> None:    
+        curr_player = self._hraci[self._current_player]
+        self._vysledek_dvojkostky = self._dvojkostka.hod_dvojkostkou()
+        list_posunu = self.modify_list_posunu(curr_player.barva_hrace, list(self._vysledek_dvojkostky))
+        return list_posunu
+        
+
+    def vypis_hru(self, curr_player: Any, next_player: Any, list_posunu: list, legal_moves: dict) -> None:
         print("---------------------------------------------------------")
         print(f"{next_player} {next_player.bar}")
         print(self._herni_deska)
         print(f"{curr_player} {curr_player.bar}")
         print(f"Na tahu je {curr_player.barva_hrace}")
-        print(f"Cisla na kostce: {vysledek_kostky}, posuny: {list_posunu}")
+        print(f"Cisla na kostce: {self._vysledek_dvojkostky}, posuny: {[abs(x) for x in list_posunu]}")
         print(f"Mozne tahy: {legal_moves}")
         print("---------------------------------------------------------")
 
@@ -171,7 +183,7 @@ class Hra:
                 s += "běžná výhra"
             print(s)
 
-    def ulozit_hru(self, herni_pole, hraci, hrac_na_tahu, list_posunu, cislo_na_kostce):
+    def ulozit_hru(self, herni_pole, hraci, hrac_na_tahu, list_posunu, vysledek_kostky):
 
         list_kamenu = []
         for pole in herni_pole:
@@ -196,7 +208,7 @@ class Hra:
         slovnik = {
             "hrac_na_tahu": hrac_na_tahu,
             "list_posunu": list_posunu,
-            "cisla_na_kostce": cislo_na_kostce,
+            "vysledek_kostky": vysledek_kostky,
             "hraci": list_hracu,
             "list_kamenu": list_kamenu
         }
