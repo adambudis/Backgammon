@@ -1,521 +1,325 @@
 import random
 from typing import Any
+from classes.stone import Stone
+from classes.home import Home
+from classes.double_dice import DoubleDice
+from classes.human_player import HumanPlayer
+from classes.ai_player import AIPlayer
+from classes.player import Player
+from classes.spike import Spike
 import json
 
 
-def main():
-    prvni, druhy = nahodna_barva_hrace()
-    protihrac = None
-    vstup = input("'vrhcaby.json' k nacteni nebo 'nova hra' k nove hre: ")
-    while vstup not in ['vrhcaby.json', 'nova hra']:
-        vstup = input("Spatny vstup zkuste: 'vrhcaby.json' k nacteni nebo 'nova hra' k nove hre: ")
-    if vstup == 'nova hra':
-        jaky_protihrac = input("Hrat proti ai nebo clovek: ")
-        while jaky_protihrac.lower() not in ['clovek', 'ai']:
-            jaky_protihrac = input("Spatny vstup zkuste: AI nebo clovek: ")
-        if jaky_protihrac.lower() == 'clovek':
-            protihrac = Konzolovy_Hrac(prvni[0], prvni[1])
-        elif jaky_protihrac.lower() == 'ai':
-            protihrac = AIHrac(prvni[0], prvni[1])
-        
-        hrac = Konzolovy_Hrac(druhy[0], druhy[1])
-        hra = Hra(pridej_hrace(hrac, protihrac))
-    else:
-        # load hry
-        # extrahovat z json
+# TODO: bíly hráč začíná jako první
 
-        # herni_deska - Kamen - barva_kamene, historie[-1], historie 
+
+NUMBER_OF_STONES = 15
+NUMBER_OF_SPIKES = 24
+PLAYERS_ATRB = [["white", -1, 25, 0, range(1, 6+1)], ["black", 1, 0, 25, range(19, 24+1)]]
+
+
+def main():
+    opponent = None
+
+    user_input = input("Load a game -> 'vrhcaby.json' | new game -> 'new game': ")
+    while user_input not in ['vrhcaby.json', 'new game']:
+        user_input = input("Wrong input try: 'vrhcaby.json' for load or 'new game' for a new game: ")
+
+    if user_input == 'new game':
+        opponent_type = input("Play against ai or human: ")
+        while opponent_type.lower() not in ['human', 'ai']:
+            opponent_type = input("Wrong input: ai or human: ")
+
+        if opponent_type == 'human':
+            opponent = HumanPlayer(*PLAYERS_ATRB.pop(random.randrange(len(PLAYERS_ATRB))))
+        else:
+            opponent = AIPlayer(*PLAYERS_ATRB.pop(random.randrange(len(PLAYERS_ATRB))))
+        
+        player = AIPlayer(*PLAYERS_ATRB.pop())
+        game = Game([player, opponent])
+    else:
 
         data = json.load(open('vrhcaby.json'))
-        hraci = []
-        for hrac in data['hraci']:
-            new_hrac = None
-            if hrac['typ_hrace'] == 'Konzolovy_Hrac':
-                new_hrac = Konzolovy_Hrac(hrac["barva_hrace"], hrac['index_baru'], hrac['vyhozeno_kamenu'])
+        players = []
+        for player in data['players']:
+            new_player = None
+            player_atrb = PLAYERS_ATRB[0] if player['color'] == 'white' else PLAYERS_ATRB[-1]
+            if player['player_type'] == 'HumanPlayer':
+                new_player = HumanPlayer(*player_atrb, player['stones_kicked'])
             else:
-                new_hrac = AIHrac(hrac["barva_hrace"], hrac['index_baru'], hrac['vyhozeno_kamenu'])
-            for _ in range(hrac['pocet_na_baru']):
-                new_hrac.bar.vloz_kamen(Kamen(hrac["barva_hrace"], "Bar", ["Bar"]))
-            hraci.append(new_hrac)
-        hra = Hra(hraci, data['list_kamenu'], data['hrac_na_tahu'], data['list_posunu'], data["vysledek_kostky"])
+                new_player = AIPlayer(*player_atrb, player['stones_kicked'])
+            for _ in range(player['bar_size']):
+                new_player.bar.push_stone(Stone(player["color"], "bar", ["bar"]))
+            players.append(new_player)
+        game = Game(players, data['list_of_stones'], data['current_player'], data['remaining_moves'], data["double_dice_roll"])
 
 
-def nahodna_barva_hrace() -> str:
-    seznam = [("Bila", 25), ("Cerna", 0)]
-    random.shuffle(seznam)
-    return seznam
-
-def pridej_hrace(hrac1, hrac2) -> list:
-    hraci = []
-    if hrac1.barva_hrace == "Bila":
-        hraci.append(hrac1)
-        hraci.append(hrac2)
-    else:
-        hraci.append(hrac2)
-        hraci.append(hrac1)
-    return hraci
-
-
-class Hra:
-    def __init__(self, hraci: Any, list_kamenu=[], current_player=0, list_posunu=[], vysledek_kostky=[]) -> None:
-        self._herni_deska = Herni_Deska()
-        self._herni_deska.vytvor_kameny(list_kamenu)
-        self._dvojkostka = Dvojkostka()
-        self._vysledek_dvojkostky = vysledek_kostky
-        self._hraci = hraci
+class Game: 
+    def __init__(self, players: list, list_of_stones=[], current_player=0, load_remaining_moves=[], double_dice_roll=[]) -> None:
+        self._game_board = GameBoard()
+        self._game_board.create_stones(list_of_stones)
+        self._dvojkostka = DoubleDice()
+        self._double_dice_roll = double_dice_roll
+        self._players = players
         self._current_player = current_player
-        self._zapni_hru = True
-        self.zapni_hru(list_posunu)
+        self._game_is_running = True
+        self.game_on(load_remaining_moves)
 
-    def zapni_hru(self, load_list_posunu=[]) -> None:
-        if len(load_list_posunu) != 0:
-            self.dohraj_tah(load_list_posunu, self._hraci[self._current_player])
-        while self._zapni_hru:
-            list_posunu = self.zacatek_novyho_tahu()
-            self.dohraj_tah(list_posunu, self._hraci[self._current_player])
+    def game_on(self, load_remaining_moves=[]) -> None:
+        if len(load_remaining_moves) != 0:
+            self.finish_turn(load_remaining_moves, self._players[self._current_player])
+        while self._game_is_running:
+            remaining_moves = self.beginning_of_turn()
+            self.finish_turn(remaining_moves, self._players[self._current_player])
         else:
-            self.vypis_statistiky(self._hraci, self._herni_deska.herni_pole)
+            self.show_statistics(self._players, self._game_board.board)
 
-    def dohraj_tah(self, list_posunu, curr_player) -> None:
-        
-        legal_moves = self.get_legal_moves(list_posunu, curr_player)
-        self.vypis_hru(curr_player, self._hraci[self.next_player()], list_posunu, legal_moves)
+    def finish_turn(self, remaining_moves: list, curr_player: Player) -> None:
+        legal_moves = self.get_legal_moves(remaining_moves, curr_player)
 
-        while len(list_posunu) != 0 and self._zapni_hru:
+        while len(remaining_moves) != 0 and self._game_is_running:
+
+            self.game_output(curr_player, self._players[self.next_player()], remaining_moves, legal_moves)
             
             if not any(legal_moves.values()):
-                print("ZADNY MOZNY TAH")
+                print("NO MOVE AVAILABLE")
                 break
             
             # str, str, list[int, int]
-            tah = curr_player.hrat_tah(legal_moves)
+            move = curr_player.play_move(legal_moves)
 
-            if tah == "ulozit":
-                self.ulozit_hru(self._herni_deska.herni_pole, self._hraci, self._current_player, list_posunu, self._vysledek_dvojkostky)
-                while tah == "ulozit":
-                    print("HRA ULOZENA")
-                    tah = curr_player.hrat_tah(legal_moves)
-            if tah == "ukoncit":
-                self._zapni_hru = False
+            if move == "save":
+                self.save_game(self._game_board.board, self._players, self._current_player, remaining_moves, self._double_dice_roll)
+                while move == "save":
+                    print("GAME SAVED")
+                    move = curr_player.play_move(legal_moves)
+            if move == "exit":
+                self._game_is_running = False
                 break
             
-            aktualni_pozice, nova_pozice = tah
-
-            vzdalenost = nova_pozice - aktualni_pozice
-            if vzdalenost in list_posunu:
-                # odečetení od listu_posunu
-                self._herni_deska.presun_kamen(aktualni_pozice, nova_pozice, curr_player, self._hraci[self.next_player()])
-                list_posunu.remove(vzdalenost)
+            current_position, new_position = move
+            distance = new_position - current_position
+            if distance in remaining_moves:
+                self._game_board.move_stone(current_position, new_position, curr_player, self._players[self.next_player()])
+                remaining_moves.remove(distance)
             else:
-                if len(set(list_posunu)) == 1:
-                    pocet = vzdalenost / list_posunu[0]
-                    while pocet > 0:
-                        nova_pozice = self.vrat_novou_pozici(legal_moves, aktualni_pozice)
-                        self._herni_deska.presun_kamen(aktualni_pozice, nova_pozice, curr_player, self._hraci[self.next_player()])
-                        list_posunu.remove(nova_pozice - aktualni_pozice)
-                        aktualni_pozice = nova_pozice
-                        legal_moves = self.get_legal_moves(list_posunu, curr_player)
-                        pocet -= 1
+                if len(set(remaining_moves)) == 1:
+                    iteration = distance / remaining_moves[0]
+                    while iteration > 0 and any(legal_moves.values()):
+                        new_position = self.vrat_novou_pozici(legal_moves, current_position)
+                        self._game_board.move_stone(current_position, new_position, curr_player, self._players[self.next_player()])
+                        remaining_moves.remove(new_position - current_position)
+                        current_position = new_position
+                        legal_moves = self.get_legal_moves(remaining_moves, curr_player)
+                        iteration -= 1
                 else:
-                    while len(list_posunu) != 0:
-                        nova_pozice = self.vrat_novou_pozici(legal_moves, aktualni_pozice)
-                        self._herni_deska.presun_kamen(aktualni_pozice, nova_pozice, curr_player, self._hraci[self.next_player()])
-                        list_posunu.remove(nova_pozice - aktualni_pozice)
-                        aktualni_pozice = nova_pozice
-                        legal_moves = self.get_legal_moves(list_posunu, curr_player)
+                    while len(remaining_moves) != 0 and any(legal_moves.values()):
+                        new_position = self.vrat_novou_pozici(legal_moves, current_position)
+                        self._game_board.move_stone(current_position, new_position, curr_player, self._players[self.next_player()])
+                        remaining_moves.remove(new_position - current_position)
+                        current_position = new_position
+                        legal_moves = self.get_legal_moves(remaining_moves, curr_player)
                 
-            legal_moves = self.get_legal_moves(list_posunu, curr_player)
-            self.vypis_hru(curr_player, self._hraci[self.next_player()], list_posunu, legal_moves) 
+            legal_moves = self.get_legal_moves(remaining_moves, curr_player)
+            #self.game_output(curr_player, self._players[self.next_player()], remaining_moves, legal_moves) 
 
-            self.je_vyhra(self._herni_deska.herni_pole, curr_player, self._hraci[self.next_player()])
+            self.check_win(self._game_board.board, curr_player, self._players[self.next_player()])
 
         self._current_player = self.next_player()
 
-    def zacatek_novyho_tahu(self) -> None:    
-        curr_player = self._hraci[self._current_player]
-        self._vysledek_dvojkostky = self._dvojkostka.hod_dvojkostkou()
-        #self._vysledek_dvojkostky = [1, 1, 1, 1]
-        list_posunu = self.modify_list_posunu(curr_player.barva_hrace, list(self._vysledek_dvojkostky))
-        legal_moves = self.get_legal_moves(list_posunu, curr_player)
-        self.vypis_hru(curr_player, self._hraci[self.next_player()], list_posunu, legal_moves)
-        return list_posunu
+    def beginning_of_turn(self) -> None:    
+        curr_player = self._players[self._current_player]
+        self._double_dice_roll = self._dvojkostka.throw_double_dice()
+        remaining_moves = [i * curr_player.move_direction for i in self._double_dice_roll]
+        #legal_moves = self.get_legal_moves(remaining_moves, curr_player)
+        #self.game_output(curr_player, self._players[self.next_player()], remaining_moves, legal_moves)
+        return remaining_moves
 
-    def vypis_hru(self, curr_player: Any, next_player: Any, list_posunu: list, legal_moves: dict) -> None:
+    def game_output(self, player: Player, opponent: Player, remaining_moves: list, legal_moves: dict) -> None:
         print("---------------------------------------------------------")
-        print(f"{next_player} {next_player.bar}")
-        print(self._herni_deska)
-        print(f"{curr_player} {curr_player.bar}")
-        print(f"Na tahu je {curr_player.barva_hrace}")
-        print(f"Cisla na kostce: {self._vysledek_dvojkostky}, posuny: {[abs(x) for x in list_posunu]}")
-        print(f"Mozne tahy: {legal_moves}")
+        print(f"{opponent} {opponent.bar}")
+        print(self._game_board)
+        print(f"{player} {player.bar}")
+        print("--------------")
+        print(f"It's {player}'s turn")
+        print(f"Numbers on dice: {self._double_dice_roll}, ramaining moves: {[abs(x) for x in remaining_moves]}")
+        print(f"Legal moves: {legal_moves}")
         print("---------------------------------------------------------")
 
-    def vypis_statistiky(self, hraci, herni_pole):
-        # pocet - vyhozenych, vyvedenych, opustenych kamenu
+    def show_statistics(self, players: list, board: list):
         print("---------------------------------------------------------")
-        print("STATISTIKY")
-        for hrac in hraci:
-            print(f"Barva hrace: {hrac.barva_hrace}")
-            print(f"Bylo vyhozeno: {hrac.vyhozeno_kamenu}")
-            print(f"Vyvedeno kamenu: {herni_pole[hrac.index_domecku()].get_velikost()}")
-            print(f"Opusteno kamenu: {15 - herni_pole[hrac.index_domecku()].get_velikost()}")
-            print("------------")
+        print("STATISTICS")
+        for player in players:
+            print(f"Player's color: {player}")
+            print(f"Stones kicked: {player.stones_kicked}")
+            print(f"Stones in home: {board[player.home_index].size()}")
+            print(f"Abandoned stones: {NUMBER_OF_STONES - board[player.home_index].size()}")
+            print("--------------")
         print("---------------------------------------------------------")
-        ukoncit_hru = input("Pro ukonceni napiste 'ukoncit': ")
-        while ukoncit_hru != "ukoncit":
-            ukoncit_hru = input("Pro ukonceni napiste 'ukoncit': ")
+        exit_game = input("To quit game write 'exit': ")
+        while exit_game != "exit":
+            exit_game = input("To quit game write 'exit': ")
 
-    def je_vyhra(self, herni_pole, hrac_na_tahu, protihrac):
-        if herni_pole[hrac_na_tahu.index_domecku()].get_velikost() == 15:
-            self._zapni_hru = False
-            s = f"Vyhrál hráč {hrac_na_tahu.barva_hrace} s typem výhry "
-            if herni_pole[protihrac.index_domecku()].get_velikost() == 0 and protihrac.bar.get_velikost() > 0:
-                s += "backgammon"
-            elif herni_pole[protihrac.index_domecku()].get_velikost() == 0:
-                s += "gammon"
+    def check_win(self, board: list, player: Player, opponent: Player):
+        if board[player.home_index].size() == NUMBER_OF_STONES:
+            self._game_is_running = False
+            s = f"PLAYER {player.color} HAS WON. TYPE OF WIN: "
+            if board[opponent.home_index].is_empty() and opponent.bar.size() > 0:
+                s += "BACKGAMMON"
+            elif board[opponent.home_index].is_empty():
+                s += "GAMMON"
             else:
-                s += "běžná výhra"
+                s += "COMMON WIN"
             print(s)
 
-    def ulozit_hru(self, herni_pole, hraci, hrac_na_tahu, list_posunu, vysledek_kostky):
+    def save_game(self, spikes: list, players: list, current_player: int, remaining_moves: list, double_dice_roll: list):
+        list_of_stones = []
+        for spike in spikes:
+            for stone in spike.stones:
+                list_of_stones.append({
+                    "color": stone.color,
+                    "history": stone.history
+                })
 
-        list_kamenu = []
-        for pole in herni_pole:
-            for stone in pole.kameny:
-                kamen = {
-                    "barva_kamene": stone.barva_kamene,
-                    "historie": stone.historie
-                }
-                list_kamenu.append(kamen)
-
-        list_hracu = []
-        for hrac in hraci:
-            typ_hrace = "Konzolovy_Hrac" if Konzolovy_Hrac is type(hrac) else "AIHrac" 
-            list_hracu.append({
-                "barva_hrace": hrac.barva_hrace,
-                "vyhozeno_kamenu": hrac.vyhozeno_kamenu,
-                "index_baru": hrac.bar.cislo_pole,
-                "pocet_na_baru": hrac.bar.get_velikost(),
-                "typ_hrace": typ_hrace
+        players_to_save = []
+        for player in players:
+            players_to_save.append({
+                "color": player.color,
+                "stones_kicked": player.stones_kicked,
+                "bar_size": player.bar.size(),
+                "player_type": "HumanPlayer" if isinstance(player, HumanPlayer) else "AIPlayer" 
             })
                     
-        slovnik = {
-            "hrac_na_tahu": hrac_na_tahu,
-            "list_posunu": list_posunu,
-            "vysledek_kostky": vysledek_kostky,
-            "hraci": list_hracu,
-            "list_kamenu": list_kamenu
+        dict_to_save = {
+            "current_player": current_player,
+            "remaining_moves": remaining_moves,
+            "double_dice_roll": double_dice_roll,
+            "players": players_to_save,
+            "list_of_stones": list_of_stones
         }
-        
-        json_objects = json.dumps(slovnik, indent=4)
-
+    
         with open("vrhcaby.json", "w") as soubor:
-            soubor.write(json_objects)
+            json.dump(dict_to_save, soubor, indent=4)
 
     def next_player(self):
-        return (self._current_player + 1) % len(self._hraci)
+        return (self._current_player + 1) % len(self._players)
 
-    def get_legal_moves(self, list_posunu: list, hrac: Any) -> dict:
-        return self._herni_deska.get_legal_moves(list_posunu, hrac)
-
-    def modify_list_posunu(self, barva_hrace: str, list_posunu: int) -> list:
-        return [-x for x in list_posunu] if barva_hrace == "Bila" else list_posunu
-    
-    def vrat_novou_pozici(self, legal_moves, aktualni_pozice):
+    def get_legal_moves(self, remaining_moves: list, player: Player) -> dict:
+        return self._game_board.get_legal_moves(remaining_moves, player)
+          
+    def vrat_novou_pozici(self, legal_moves: dict, aktualni_pozice: int) -> Any:
         if aktualni_pozice in [0, 25]:
-            aktualni_pozice = "Bar"
+            aktualni_pozice = "bar"
         return legal_moves.get(aktualni_pozice)[0]
 
-class Herni_Deska:
+
+class GameBoard:
     def __init__(self) -> None:
-        self._herni_pole = self.vytvor_herni_pole()
+        self._board = self.create_spikes()
 
     @property
-    def herni_pole(self) -> list:
-        return self._herni_pole
+    def board(self) -> list:
+        return self._board
 
-    def vytvor_herni_pole(self) -> list:
-        herni_pole = []
-        herni_pole.append(Domecek(0, 15))
-        for i in range(1, 24+1):
-            herni_pole.append(Herni_Pole(i))
-        herni_pole.append(Domecek(25, 15))
-        return herni_pole
+    def create_spikes(self) -> list:
+        spikes = []
+        spikes.append(Home(0, 15))
+        for i in range(1, NUMBER_OF_SPIKES+1):
+            spikes.append(Spike(i))
+        spikes.append(Home(25, 15))
+        return spikes
 
-    def vytvor_kameny(self, list_kamenu: list) -> None:
-        if len(list_kamenu) == 0:
-            kameny = [0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 0, 0, 0, 0, 3, 0, 5, 0, 0, 0, 0, 0, 0]
-            #kameny = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-            for i in range(len(kameny)):
-                for _ in range(kameny[i]):
-                        self._herni_pole[i].vloz_kamen(Kamen("Cerna", i, []))
-                        self._herni_pole[len(kameny) - i - 1].vloz_kamen(Kamen("Bila", len(kameny) - i - 1, []))
+    def create_stones(self, loaded_stones: list) -> None:
+        if len(loaded_stones) == 0:
+            startng_pos_of_stones = [0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 0, 0, 0, 0, 3, 0, 5, 0, 0, 0, 0, 0, 0]
+            for i in range(len(startng_pos_of_stones)):
+                for _ in range(startng_pos_of_stones[i]):
+                        self._board[i].push_stone(Stone("black", i, []))
+                        # print(self._board[i].get_stone().history)
+                        self._board[len(startng_pos_of_stones) - i - 1].push_stone(Stone("white", len(startng_pos_of_stones) - i - 1, []))
         else:
-            for kamen in list_kamenu:
-                barva_kamene = kamen['barva_kamene']
-                historie = kamen['historie']
-                pozice_kamene = historie[-1]
-                self._herni_pole[pozice_kamene].vloz_kamen(Kamen(barva_kamene, pozice_kamene, historie))
+            for stone in loaded_stones:
+                color = stone['color']
+                history = stone['history']
+                position = history[-1]
+                self._board[position].push_stone(Stone(color, position, history))
    
-    def presun_kamen(self, aktualni_pozice: int, nova_pozice: int, hrac, protihrac) -> None:
-        kamen1 = None
-        if aktualni_pozice == hrac.bar.cislo_pole:
-            kamen1 = hrac.bar.vytahni_kamen()
-            kamen1.vymaz_historii()
+    def move_stone(self, current_position: int, new_position: int, player: Player, opponent: Player) -> None:
+        stone = None
+        if current_position == player.bar.index:
+            stone = player.bar.pop_stone()
+            stone.delete_history()
         else:
-            kamen1 = self._herni_pole[aktualni_pozice].vytahni_kamen()
+            stone = self._board[current_position].pop_stone()
 
-        if self.muze_byt_vyhozen(kamen1.barva_kamene, nova_pozice):
-            self.vyhod_kamen(nova_pozice, protihrac)
+        if self.can_kick_stone(stone.color, new_position):
+            self.kick_stone(new_position, opponent)
 
-        self._herni_pole[nova_pozice].vloz_kamen(kamen1)
-        kamen1.zapis_pozici_do_historie(nova_pozice)    
-        print(f"KAMEN SE POHNUL Z {aktualni_pozice} na {nova_pozice}")
+        self._board[new_position].push_stone(stone)
+        stone.add_positon_to_history(new_position)    
+        print(f"STONE MOVED FROM {current_position} TO {new_position}")
 
-    def get_legal_moves(self, list_posunu: list, hrac: Any) -> dict:
-        # list_posunu -> [4, 6],[4, 6, 10] or [2, 2, 2, 2],[2, 4, 6, 8]
-        # list_posunu -> [4],[4] or [2, 2, 2],[2, 4, 6]  
+    def get_legal_moves(self, list_of_moves: list, player: Player) -> dict:
         valid_moves = {}
-        # pokud je v baru kámen
-        if hrac.bar.get_velikost() > 0:
-            valid_moves["Bar"] = self.calculate_legal_moves(hrac.bar.cislo_pole, list_posunu, hrac.barva_hrace)
+        if player.bar.size() > 0:
+            valid_moves["bar"] = self.calculate_legal_moves(player.bar.index, list_of_moves, player)
         else:
-            for pole in self._herni_pole[1:-1]:
-                if pole.get_velikost() >= 1:
-                    if pole.get_kamen().barva_kamene == hrac.barva_hrace:
-                        moves = self.calculate_legal_moves(pole.cislo_pole, list_posunu, hrac.barva_hrace)
+            for spike in self._board[1:-1]:
+                if spike.size() >= 1:
+                    if spike.get_stone().color == player.color:
+                        moves = self.calculate_legal_moves(spike.index, list_of_moves, player)
                         if len(moves) != 0:
-                            valid_moves[pole.cislo_pole] = moves
+                            valid_moves[spike.index] = moves
         return valid_moves
     
-    def calculate_legal_moves(self, cislo_pole: int, list_posunu: list, hrac_na_tahu: str) -> list:
-        list_of_moves = [] 
-        # pokud list_posunu obsahuje stejná čísla nebo 1 číslo
-        if len(set(list_posunu)) == 1:                                           
-            posuny = [x * list_posunu[0] for x in range(1, len(list_posunu)+1)]
-            for posun in posuny:
-                if self.is_valid_move(cislo_pole + posun, hrac_na_tahu):
-                    list_of_moves.append(cislo_pole + posun)
+    def calculate_legal_moves(self, spike_index: int, list_of_moves: list, player: Player) -> list:
+        possible_moves = [] 
+        if len(set(list_of_moves)) == 1:                                           
+            moves = [x * list_of_moves[0] for x in range(1, len(list_of_moves)+1)]
+            for move in moves:
+                if self.is_valid_move(spike_index + move, player):
+                    possible_moves.append(spike_index + move)
                 else:
                     break
         else:
-            for posun in list_posunu:
-                if self.is_valid_move(cislo_pole + posun, hrac_na_tahu):
-                    list_of_moves.append(cislo_pole + posun)
-            if len(list_of_moves) != 0:
-                if self.is_valid_move(cislo_pole + sum(list_posunu), hrac_na_tahu):
-                    list_of_moves.append(cislo_pole + sum(list_posunu))
-        return list_of_moves
+            for move in list_of_moves:
+                if self.is_valid_move(spike_index + move, player):
+                    possible_moves.append(spike_index + move)
+            if len(possible_moves) != 0:
+                if self.is_valid_move(spike_index + sum(list_of_moves), player):
+                    possible_moves.append(spike_index + sum(list_of_moves))
+        return possible_moves
 
-    def is_valid_move(self, stone_to: int, barva_hrace: str) -> bool:
-        if stone_to < 0 or stone_to > len(self._herni_pole) - 1:
+    def is_valid_move(self, stone_to: int, player: Player) -> bool:
+        if stone_to < 0 or stone_to > len(self._board) - 1:
             return False
-        if stone_to in [0, 25] and self.muze_jit_do_domecku(barva_hrace):
+        if stone_to == player.home_index and self.can_go_home(player):
             return True
         elif not stone_to in [0, 25]:
-            druhy_pole = self._herni_pole[stone_to]
-            return druhy_pole.get_velikost() <= 1 or (barva_hrace == druhy_pole.get_kamen().barva_kamene and druhy_pole.get_velikost() < 5)
+            second_spike = self._board[stone_to]
+            return second_spike.size() <= 1 or (player.color == second_spike.get_stone().color and second_spike.size() < 5)
 
-    # PREDELAT
-    def muze_jit_do_domecku(self, barva_hrace: str) -> bool:
-        # checknout jestli jsou v posledním kvadrantu všechny kameny
-        # only in 1-6 white
-        # only in 19-24 black
-        if barva_hrace == "Bila":
-            for pole in self._herni_pole[1:-1]:
-                if not pole.je_prazdny():
-                    if pole.get_kamen().barva_kamene == barva_hrace:
-                        if pole.cislo_pole > 6:
-                            return False
-            return True
-        else:
-            for pole in self._herni_pole[1:-1]:
-                if pole.get_velikost() >= 1:
-                    if pole.get_kamen().barva_kamene == barva_hrace:
-                        if pole.cislo_pole < 19:
-                            #print("INVALID MOVE")
-                            return False
-            return True
+    def can_go_home(self, player: Player) -> bool:
+        for spike in self._board[1:-1]:
+            if not spike.is_empty():
+                if spike.get_stone().color == player.color:
+                    if spike.index not in player.home_board:
+                        return False
+        return True
 
-    def muze_byt_vyhozen(self, barva_kamene: str, stone_to: int) -> bool:
-        druhy_pole = self._herni_pole[stone_to]
-        return druhy_pole.get_velikost() == 1 and barva_kamene != druhy_pole.get_kamen().barva_kamene
+    def can_kick_stone(self, stone_color: str, stone_to: int) -> bool:
+        second_spike = self._board[stone_to]
+        return second_spike.size() == 1 and stone_color != second_spike.get_stone().color
 
-    def vyhod_kamen(self, pozice_kamene: int, hrac) -> None:
-        kamen = self._herni_pole[pozice_kamene].vytahni_kamen()
-        hrac.bar.vloz_kamen(kamen)
-        hrac.zvys_pocet_vyhozeno_kamenu()
-        kamen.zapis_pozici_do_historie("Bar")
-        print("Kamen byl vyhozen")
+    def kick_stone(self, position: int, player: Player) -> None:
+        stone = self._board[position].pop_stone()
+        player.bar.push_stone(stone)
+        player.increase_number_of_stones_kicked()
+        stone.add_positon_to_history("bar")
+        print("STONE WAS MOVED TO BAR")
 
     def __str__(self) -> str:
-        return "\n".join(str(pole) for pole in self._herni_pole)
-
-
-class Kamen:
-    def __init__(self, barva_kamene: str, pozice_kamene: int, historie) -> None:
-        self._barva_kamene = barva_kamene
-        self._historie = historie
-        self.zapis_pozici_do_historie(pozice_kamene)
-
-    @property
-    def barva_kamene(self) -> str:
-        return self._barva_kamene
-
-    @property
-    def historie(self) -> list:
-        return self._historie
-
-    def vymaz_historii(self) -> None:
-        self._historie = self._historie[-1:]
-
-    def get_pozice_kamene(self) -> int:
-        return self._historie[-1]
-
-    def zapis_pozici_do_historie(self, nova_pozice: Any) -> None:
-        if len(self._historie) != 0:
-            if self._historie[-1] != nova_pozice:
-                self._historie.append(nova_pozice)
-                return
-        else:
-            self._historie.append(nova_pozice)
-
-    def __str__(self) -> str:
-        return f"{self._barva_kamene}"
-
-
-# modifikovany zasobnik
-class Herni_Pole:
-    def __init__(self, i: int, max_size=5) -> None:
-        self._cislo_pole = i
-        self._kameny = []
-        self._max_size = max_size
-
-    def vloz_kamen(self, kamen: Kamen) -> None:
-        if len(self._kameny) <= self._max_size:
-            self._kameny.append(kamen)
-
-    def vytahni_kamen(self) -> Kamen:
-        if len(self._kameny):
-            return self._kameny.pop()
-
-    def get_kamen(self) -> Kamen:
-        if len(self._kameny):
-            return self._kameny[-1]
-
-    def je_prazdny(self) -> bool:
-        return len(self._kameny) == 0
-
-    def get_velikost(self) -> int:
-        return len(self._kameny)
-
-    @property
-    def cislo_pole(self) -> int:
-        return self._cislo_pole
-    
-    @property
-    def kameny(self) -> list:
-        return self._kameny
-
-    def __str__(self) -> str:
-        return f"{self._cislo_pole}: {[str(kamen) for kamen in self._kameny]}"
-
-
-class Bar(Herni_Pole):
-    def __init__(self, i: int, max_size: int) -> None:
-        super().__init__(i, max_size)
-
-    def __str__(self) -> str:
-        return f"bar: {self.get_velikost()}"
-    
-
-class Domecek(Herni_Pole):
-    def __init__(self, i: int, max_size: int) -> None:
-        super().__init__(i, max_size)
-
-    def __str__(self) -> str:
-        return f"Home: {self.get_velikost()}"
-
-
-class Hrac:
-    def __init__(self, barva_hrace, index_baru, vyhozeno_kamenu=0) -> None:
-        self._barva_hrace = barva_hrace
-        self._bar = Bar(index_baru, 15)
-        self._vyhozeno_kamenu = vyhozeno_kamenu
-
-    @property
-    def vyhozeno_kamenu(self):
-        return self._vyhozeno_kamenu
-    
-    def zvys_pocet_vyhozeno_kamenu(self):
-        self._vyhozeno_kamenu += 1
-
-    @property
-    def barva_hrace(self) -> str:
-        return self._barva_hrace
-    
-    @property
-    def bar(self) -> Bar:
-        return self._bar
-    
-    def index_domecku(self) -> int:
-        return 0 if self._bar.cislo_pole == 25 else 25
-
-    def __str__(self) -> str:
-        return f"{self._barva_hrace}"
-
-
-class Konzolovy_Hrac(Hrac):
-    def __init__(self, barva_hrace, index_baru, vyhozeno_kamenu=0) -> None:
-        super().__init__(barva_hrace, index_baru, vyhozeno_kamenu)
-
-    def hrat_tah(self, legal_moves: dict) -> Any:
-        tah = check_input(input("Zadej tah: ").split(','))
-        while True:
-            if tah[0] in ["ukoncit", "ulozit"]:
-                return tah[0]
-            for key, values in legal_moves.items():
-                if tah[0] == key and tah[1] in values:
-                    if tah[0] == "Bar":
-                        return [self.bar.cislo_pole, tah[1]]
-                    return tah 
-            else:
-                tah = check_input(input("Nelegální tah, zadejte tah znovu: ").split(','))
-
-
-class AIHrac(Hrac):
-    def __init__(self, barva_hrace, index_baru, vyhozeno_kamenu=0) -> None:
-        super().__init__(barva_hrace, index_baru, vyhozeno_kamenu)
-
-    def hrat_tah(self, legal_moves: dict) -> list:
-        random_key = random.choice(list(legal_moves.keys()))
-        random_value = random.choice(legal_moves.get(random_key))
-        if random_key == "Bar":
-            random_key = self.bar.cislo_pole
-        return [random_key, random_value]  
-
-
-class Dvojkostka:
-    def __init__(self) -> None:
-        pass
-
-    def hod_dvojkostkou(self) -> list:
-        prvni_hod = random.randint(1, 6)
-        druhy_hod = random.randint(1, 6)
-        if prvni_hod == druhy_hod:
-            return [prvni_hod for _ in range(4)]
-        else:
-            return [prvni_hod, druhy_hod]
-
-
-def check_input(items: list) -> list:
-    result = []
-    for item in items:
-        try:
-            result.append(int(item))
-        except ValueError:
-            result.append(item)
-    return result
+        return "\n".join(str(spike) for spike in self._board)
 
 
 if __name__ == "__main__":

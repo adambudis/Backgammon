@@ -1,215 +1,205 @@
 {
-    "hrac_na_tahu": 0,
-    "list_posunu": [
-        -4,
-        -5
+    "current_player": 0,
+    "remaining_moves": [
+        2,
+        1
     ],
-    "vysledek_kostky": [
-        4,
-        5
+    "double_dice_roll": [
+        2,
+        1
     ],
-    "hraci": [
+    "players": [
         {
-            "barva_hrace": "Bila",
-            "vyhozeno_kamenu": 0,
-            "index_baru": 25,
-            "pocet_na_baru": 0,
-            "typ_hrace": "Konzolovy_Hrac"
+            "color": "black",
+            "stones_kicked": 0,
+            "bar_size": 0,
+            "player_type": "HumanPlayer"
         },
         {
-            "barva_hrace": "Cerna",
-            "vyhozeno_kamenu": 1,
-            "index_baru": 0,
-            "pocet_na_baru": 0,
-            "typ_hrace": "Konzolovy_Hrac"
+            "color": "white",
+            "stones_kicked": 0,
+            "bar_size": 0,
+            "player_type": "HumanPlayer"
         }
     ],
-    "list_kamenu": [
+    "list_of_stones": [
         {
-            "barva_kamene": "Bila",
-            "historie": [
-                6,
-                2,
+            "color": "black",
+            "history": [
                 1
             ]
         },
         {
-            "barva_kamene": "Bila",
-            "historie": [
-                6,
-                3,
+            "color": "black",
+            "history": [
                 1
             ]
         },
         {
-            "barva_kamene": "Bila",
-            "historie": [
+            "color": "white",
+            "history": [
                 6
             ]
         },
         {
-            "barva_kamene": "Bila",
-            "historie": [
+            "color": "white",
+            "history": [
                 6
             ]
         },
         {
-            "barva_kamene": "Bila",
-            "historie": [
+            "color": "white",
+            "history": [
                 6
             ]
         },
         {
-            "barva_kamene": "Bila",
-            "historie": [
+            "color": "white",
+            "history": [
+                6
+            ]
+        },
+        {
+            "color": "white",
+            "history": [
+                6
+            ]
+        },
+        {
+            "color": "white",
+            "history": [
                 8
             ]
         },
         {
-            "barva_kamene": "Bila",
-            "historie": [
+            "color": "white",
+            "history": [
                 8
             ]
         },
         {
-            "barva_kamene": "Bila",
-            "historie": [
+            "color": "white",
+            "history": [
                 8
             ]
         },
         {
-            "barva_kamene": "Cerna",
-            "historie": [
-                "Bar",
-                5,
-                9
-            ]
-        },
-        {
-            "barva_kamene": "Cerna",
-            "historie": [
-                1,
-                4,
-                10
-            ]
-        },
-        {
-            "barva_kamene": "Cerna",
-            "historie": [
+            "color": "black",
+            "history": [
                 12
             ]
         },
         {
-            "barva_kamene": "Cerna",
-            "historie": [
+            "color": "black",
+            "history": [
                 12
             ]
         },
         {
-            "barva_kamene": "Cerna",
-            "historie": [
+            "color": "black",
+            "history": [
                 12
             ]
         },
         {
-            "barva_kamene": "Cerna",
-            "historie": [
+            "color": "black",
+            "history": [
                 12
             ]
         },
         {
-            "barva_kamene": "Cerna",
-            "historie": [
+            "color": "black",
+            "history": [
                 12
             ]
         },
         {
-            "barva_kamene": "Bila",
-            "historie": [
+            "color": "white",
+            "history": [
                 13
             ]
         },
         {
-            "barva_kamene": "Bila",
-            "historie": [
+            "color": "white",
+            "history": [
                 13
             ]
         },
         {
-            "barva_kamene": "Bila",
-            "historie": [
+            "color": "white",
+            "history": [
                 13
             ]
         },
         {
-            "barva_kamene": "Bila",
-            "historie": [
+            "color": "white",
+            "history": [
                 13
             ]
         },
         {
-            "barva_kamene": "Bila",
-            "historie": [
+            "color": "white",
+            "history": [
                 13
             ]
         },
         {
-            "barva_kamene": "Cerna",
-            "historie": [
+            "color": "black",
+            "history": [
                 17
             ]
         },
         {
-            "barva_kamene": "Cerna",
-            "historie": [
+            "color": "black",
+            "history": [
                 17
             ]
         },
         {
-            "barva_kamene": "Cerna",
-            "historie": [
+            "color": "black",
+            "history": [
                 17
             ]
         },
         {
-            "barva_kamene": "Cerna",
-            "historie": [
+            "color": "black",
+            "history": [
                 19
             ]
         },
         {
-            "barva_kamene": "Cerna",
-            "historie": [
+            "color": "black",
+            "history": [
                 19
             ]
         },
         {
-            "barva_kamene": "Cerna",
-            "historie": [
+            "color": "black",
+            "history": [
                 19
             ]
         },
         {
-            "barva_kamene": "Cerna",
-            "historie": [
+            "color": "black",
+            "history": [
                 19
             ]
         },
         {
-            "barva_kamene": "Cerna",
-            "historie": [
+            "color": "black",
+            "history": [
                 19
             ]
         },
         {
-            "barva_kamene": "Bila",
-            "historie": [
+            "color": "white",
+            "history": [
                 24
             ]
         },
         {
-            "barva_kamene": "Bila",
-            "historie": [
+            "color": "white",
+            "history": [
                 24
             ]
         }
