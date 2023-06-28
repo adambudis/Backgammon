@@ -10,9 +10,6 @@ from classes.spike import Spike
 import json
 
 
-# TODO: bíly hráč začíná jako první
-
-
 NUMBER_OF_STONES = 15
 NUMBER_OF_SPIKES = 24
 PLAYERS_ATRB = [["white", -1, 25, 0, range(1, 6+1)], ["black", 1, 0, 25, range(19, 24+1)]]
@@ -35,8 +32,9 @@ def main():
         else:
             opponent = AIPlayer(*PLAYERS_ATRB.pop(random.randrange(len(PLAYERS_ATRB))))
         
-        player = AIPlayer(*PLAYERS_ATRB.pop())
-        game = Game([player, opponent])
+        player = HumanPlayer(*PLAYERS_ATRB.pop())
+        players = [player, opponent] if player.color == "white" else [opponent, player]
+        game = Game(players)
     else:
 
         data = json.load(open('vrhcaby.json'))
@@ -102,26 +100,8 @@ class Game:
             if distance in remaining_moves:
                 self._game_board.move_stone(current_position, new_position, curr_player, self._players[self.next_player()])
                 remaining_moves.remove(distance)
-            else:
-                if len(set(remaining_moves)) == 1:
-                    iteration = distance / remaining_moves[0]
-                    while iteration > 0 and any(legal_moves.values()):
-                        new_position = self.vrat_novou_pozici(legal_moves, current_position)
-                        self._game_board.move_stone(current_position, new_position, curr_player, self._players[self.next_player()])
-                        remaining_moves.remove(new_position - current_position)
-                        current_position = new_position
-                        legal_moves = self.get_legal_moves(remaining_moves, curr_player)
-                        iteration -= 1
-                else:
-                    while len(remaining_moves) != 0 and any(legal_moves.values()):
-                        new_position = self.vrat_novou_pozici(legal_moves, current_position)
-                        self._game_board.move_stone(current_position, new_position, curr_player, self._players[self.next_player()])
-                        remaining_moves.remove(new_position - current_position)
-                        current_position = new_position
-                        legal_moves = self.get_legal_moves(remaining_moves, curr_player)
                 
             legal_moves = self.get_legal_moves(remaining_moves, curr_player)
-            #self.game_output(curr_player, self._players[self.next_player()], remaining_moves, legal_moves) 
 
             self.check_win(self._game_board.board, curr_player, self._players[self.next_player()])
 
@@ -207,11 +187,6 @@ class Game:
     def get_legal_moves(self, remaining_moves: list, player: Player) -> dict:
         return self._game_board.get_legal_moves(remaining_moves, player)
           
-    def vrat_novou_pozici(self, legal_moves: dict, aktualni_pozice: int) -> Any:
-        if aktualni_pozice in [0, 25]:
-            aktualni_pozice = "bar"
-        return legal_moves.get(aktualni_pozice)[0]
-
 
 class GameBoard:
     def __init__(self) -> None:
@@ -273,21 +248,10 @@ class GameBoard:
         return valid_moves
     
     def calculate_legal_moves(self, spike_index: int, list_of_moves: list, player: Player) -> list:
-        possible_moves = [] 
-        if len(set(list_of_moves)) == 1:                                           
-            moves = [x * list_of_moves[0] for x in range(1, len(list_of_moves)+1)]
-            for move in moves:
-                if self.is_valid_move(spike_index + move, player):
+        possible_moves = []
+        for move in set(list_of_moves):
+            if self.is_valid_move(spike_index + move, player):
                     possible_moves.append(spike_index + move)
-                else:
-                    break
-        else:
-            for move in list_of_moves:
-                if self.is_valid_move(spike_index + move, player):
-                    possible_moves.append(spike_index + move)
-            if len(possible_moves) != 0:
-                if self.is_valid_move(spike_index + sum(list_of_moves), player):
-                    possible_moves.append(spike_index + sum(list_of_moves))
         return possible_moves
 
     def is_valid_move(self, stone_to: int, player: Player) -> bool:

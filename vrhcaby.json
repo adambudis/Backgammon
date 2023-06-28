@@ -1,22 +1,22 @@
 {
-    "current_player": 0,
+    "current_player": 1,
     "remaining_moves": [
-        2,
-        1
+        6,
+        3
     ],
     "double_dice_roll": [
-        2,
-        1
+        6,
+        3
     ],
     "players": [
         {
-            "color": "black",
-            "stones_kicked": 0,
+            "color": "white",
+            "stones_kicked": 1,
             "bar_size": 0,
-            "player_type": "HumanPlayer"
+            "player_type": "AIPlayer"
         },
         {
-            "color": "white",
+            "color": "black",
             "stones_kicked": 0,
             "bar_size": 0,
             "player_type": "HumanPlayer"
@@ -24,15 +24,19 @@
     ],
     "list_of_stones": [
         {
-            "color": "black",
+            "color": "white",
             "history": [
+                8,
+                3,
+                2,
                 1
             ]
         },
         {
-            "color": "black",
+            "color": "white",
             "history": [
-                1
+                6,
+                5
             ]
         },
         {
@@ -57,36 +61,32 @@
             "color": "white",
             "history": [
                 6
-            ]
-        },
-        {
-            "color": "white",
-            "history": [
-                6
-            ]
-        },
-        {
-            "color": "white",
-            "history": [
-                8
-            ]
-        },
-        {
-            "color": "white",
-            "history": [
-                8
-            ]
-        },
-        {
-            "color": "white",
-            "history": [
-                8
             ]
         },
         {
             "color": "black",
             "history": [
-                12
+                1,
+                7
+            ]
+        },
+        {
+            "color": "black",
+            "history": [
+                1,
+                7
+            ]
+        },
+        {
+            "color": "white",
+            "history": [
+                8
+            ]
+        },
+        {
+            "color": "white",
+            "history": [
+                8
             ]
         },
         {
@@ -158,7 +158,8 @@
         {
             "color": "black",
             "history": [
-                17
+                12,
+                18
             ]
         },
         {
@@ -189,6 +190,13 @@
             "color": "black",
             "history": [
                 19
+            ]
+        },
+        {
+            "color": "black",
+            "history": [
+                17,
+                23
             ]
         },
         {
@@ -200,6 +208,7 @@
         {
             "color": "white",
             "history": [
+                "bar",
                 24
             ]
         }
